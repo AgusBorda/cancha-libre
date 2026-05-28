@@ -3,17 +3,21 @@ import { notFound } from "next/navigation"
 import { Navbar } from "@/components/public/Navbar"
 import { Footer } from "@/components/public/Footer"
 import { formatDate, formatTime, formatCurrency, RESERVATION_STATUS, COURT_TYPES } from "@/lib/utils"
-import { CheckCircle2, MapPin, Clock, Calendar, DollarSign, Share2 } from "lucide-react"
+import { CheckCircle2, MapPin, Clock, Calendar, DollarSign, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { ShareButton } from "./ShareButton"
+import { PayAgainButton } from "./PayAgainButton"
 
 export default async function ReservationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ pago?: string }>
 }) {
   const { id } = await params
+  const { pago } = await searchParams
   let reservation
   try {
     reservation = await getReservationById(id)
@@ -155,23 +159,19 @@ export default async function ReservationPage({
                   <p className="text-sm font-semibold text-yellow-800 mb-1">
                     Pendiente: pago de seña
                   </p>
-                  <p className="text-xs text-yellow-700">
-                    Para confirmar tu turno, abonás una seña de{" "}
+                  <p className="text-xs text-yellow-700 mb-3">
+                    Para confirmar tu turno abonás una seña de{" "}
                     <strong>{formatCurrency(reservation.deposit_amount)}</strong>.
-                    {complex?.whatsapp && (
-                      <>
-                        {" "}Contactá al complejo:{" "}
-                        <a
-                          href={`https://wa.me/${complex.whatsapp}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-green-700 hover:underline"
-                        >
-                          WhatsApp
-                        </a>
-                      </>
-                    )}
                   </p>
+                  <PayAgainButton
+                    reservationId={reservation.id}
+                    courtName={court?.name}
+                    complexName={complex?.name}
+                    date={reservation.date}
+                    startTime={reservation.start_time}
+                    endTime={reservation.end_time}
+                    depositAmount={reservation.deposit_amount}
+                  />
                 </div>
               )}
           </div>
@@ -197,6 +197,26 @@ export default async function ReservationPage({
             </p>
           </div>
         </div>
+
+        {/* Banner resultado pago MP */}
+        {pago === "ok" && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 mb-4">
+            <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+            <p className="text-sm font-medium text-green-800">¡Seña pagada! Tu reserva está confirmada.</p>
+          </div>
+        )}
+        {pago === "error" && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 mb-4">
+            <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+            <p className="text-sm font-medium text-red-800">El pago no se pudo procesar. Podés intentarlo de nuevo.</p>
+          </div>
+        )}
+        {pago === "pendiente" && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center gap-3 mb-4">
+            <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+            <p className="text-sm font-medium text-yellow-800">Tu pago está siendo procesado. Te avisamos cuando se confirme.</p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-3">

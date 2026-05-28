@@ -162,7 +162,33 @@ export function CourtBooking({ court, complex }: Props) {
         depositAmount: court.deposit_amount,
         reservationId: data.id,
       }),
-    }).catch(() => {}) // ignoramos errores del bot para no romper el flujo
+    }).catch(() => {})
+
+    // Si hay seña → redirigir a Mercado Pago
+    if (court.deposit_amount > 0) {
+      toast.loading("Redirigiendo a Mercado Pago...")
+      const mpRes = await fetch("/api/mp/create-preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservationId: data.id,
+          courtName: court.name,
+          complexName: complex.name,
+          date: selectedDate,
+          startTime: selectedSlot.start,
+          endTime: selectedSlot.end,
+          depositAmount: court.deposit_amount,
+          playerEmail: formData.player_email || null,
+        }),
+      })
+      const { url, error: mpError } = await mpRes.json()
+      if (url) {
+        window.location.href = url
+        return
+      }
+      toast.error(mpError ?? "Error al iniciar el pago. Intentá de nuevo.")
+      return
+    }
 
     toast.success("¡Reserva confirmada!")
     router.push(`/reserva/${data.id}`)
